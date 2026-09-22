@@ -14,7 +14,7 @@ Handlers do not call ZarinHub. Dependencies are constructor-injected. `context.C
 
 ## Setup
 
-Requires Go 1.22+ for the API. The UI needs Node.js 18+.
+Requires Go 1.22+ for the API. The UI requires Node.js 20.19.0+ or 22.12.0+ to satisfy the Nuxt 3 dependency set.
 
 ```bash
 cp .env.example .env

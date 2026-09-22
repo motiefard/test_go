@@ -25,10 +25,10 @@ type Result struct {
 }
 
 type CallOutcome struct {
-	HTTPStatus  int
-	RawBody     json.RawMessage
-	Result      *Result
-	Error       error
+	HTTPStatus int
+	RawBody    json.RawMessage
+	Result     *Result
+	Error      error
 }
 
 type Converter interface {
@@ -89,17 +89,63 @@ func (c *Client) CardToIBAN(ctx context.Context, card string) CallOutcome {
 		return outcome
 	}
 
-	var result Result
-	if err := json.Unmarshal(raw, &result); err != nil {
+	var envelope responseEnvelope
+	if err := json.Unmarshal(raw, &envelope); err != nil {
 		outcome.Error = apperr.New(http.StatusBadGateway, apperr.CodeProviderError, "ZarinHub returned an unexpected payload")
 		return outcome
 	}
-	if result.IBAN == "" {
+	if envelope.Meta != nil {
+		if !envelope.Meta.IsSuccess {
+			outcome.Error = mapMetaError(*envelope.Meta)
+			return outcome
+		}
+		if len(envelope.Data) == 0 {
+			outcome.Error = apperr.New(http.StatusBadGateway, apperr.CodeProviderError, "ZarinHub returned an unexpected payload")
+			return outcome
+		}
+		if err := json.Unmarshal(envelope.Data, &envelope.Result); err != nil {
+			outcome.Error = apperr.New(http.StatusBadGateway, apperr.CodeProviderError, "ZarinHub returned an unexpected payload")
+			return outcome
+		}
+	} else if err := json.Unmarshal(raw, &envelope.Result); err != nil {
+		outcome.Error = apperr.New(http.StatusBadGateway, apperr.CodeProviderError, "ZarinHub returned an unexpected payload")
+		return outcome
+	}
+
+	if envelope.Result.IBAN == "" {
 		outcome.Error = mapBusinessError(raw)
 		return outcome
 	}
-	outcome.Result = &result
+	outcome.Result = &envelope.Result
 	return outcome
+}
+
+type responseEnvelope struct {
+	Data   json.RawMessage `json:"data"`
+	Meta   *responseMeta   `json:"meta"`
+	Result Result
+}
+
+type responseMeta struct {
+	Code         int    `json:"code"`
+	ErrorMessage string `json:"errorMessage"`
+	ErrorType    string `json:"errorType"`
+	IsSuccess    bool   `json:"isSuccess"`
+	Message      string `json:"message"`
+}
+
+func mapMetaError(meta responseMeta) error {
+	key := strings.ToLower(strings.TrimSpace(meta.ErrorType))
+	switch key {
+	case "validation_error", "bad_request":
+		return apperr.New(http.StatusBadRequest, apperr.CodeBadRequest, "ZarinHub rejected the request parameters")
+	case "unauthorized", "authentication_error":
+		return apperr.New(http.StatusUnauthorized, apperr.CodeUnauthorized, "ZarinHub authentication failed")
+	case "timeout", "request_timeout":
+		return apperr.New(http.StatusGatewayTimeout, apperr.CodeTimeout, "ZarinHub request timed out")
+	default:
+		return apperr.New(http.StatusBadGateway, apperr.CodeProviderError, "ZarinHub rejected the request")
+	}
 }
 
 type errorEnvelope struct {
