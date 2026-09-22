@@ -1,16 +1,10 @@
-FROM debian:bookworm-slim AS build
+FROM golang:1.27-bookworm AS build
 
 WORKDIR /src
-COPY --from=go-local go1.27.1.linux-amd64.tar.gz /tmp/go.tar.gz
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates tar \
-	&& tar -xzf /tmp/go.tar.gz -C /usr/local \
-	&& rm -rf /var/lib/apt/lists/* /tmp/go.tar.gz
-
 COPY go.mod go.sum ./
-RUN /usr/local/go/bin/go mod download
+RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o /out/card2sheba ./cmd/api
+RUN CGO_ENABLED=0 go build -o /out/card2sheba ./cmd/api
 
 FROM debian:bookworm-slim
 
