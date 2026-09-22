@@ -1,4 +1,4 @@
-# Card-to-SHEBA Service: GitHub Docker Setup
+# Card-to-SHEBA Service: Docker Setup
 
 This guide runs the Go API and Nuxt frontend with the portable Docker configuration. It uses public Go, Debian, and Node images and does not require the local Go archive at `/home/star/go1.27.1.linux-amd64.tar.gz`.
 
