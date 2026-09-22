@@ -5,6 +5,24 @@ const state = ref('idle')
 const result = ref(null)
 const errorMessage = ref('')
 
+const persianErrorMessages = {
+  VALIDATION_ERROR: 'اطلاعات کارت معتبر نیست.',
+  BAD_REQUEST: 'پارامترهای ارسالی معتبر نیستند.',
+  SERVER_ERROR: 'خطایی در سرور رخ داده است.',
+  TIMEOUT: 'زمان پردازش درخواست به پایان رسیده است.',
+  PROVIDER_ERROR: 'خطایی از سمت سرویس‌دهنده رخ داده است.',
+  NOT_FOUND: 'اطلاعات موردنظر یافت نشد.',
+  LOGIC_ERROR: 'خطایی در پردازش درخواست رخ داده است.',
+  UNAUTHORIZED: 'خطای احراز هویت.',
+  ACCESS_DENIED: 'دسترسی به سرویس‌دهنده رد شد.',
+  UNAVAILABLE: 'سامانه ارائه‌دهنده در حال حاضر در دسترس نیست.',
+  INTERNAL_ERROR: 'خطای داخلی رخ داده است.'
+}
+
+function getPersianErrorMessage(error) {
+  return persianErrorMessages[error?.code] || 'درخواست ناموفق بود.'
+}
+
 function formatIban(iban) {
   return (iban || '').replace(/(.{4})/g, '$1 ').trim()
 }
@@ -32,14 +50,14 @@ async function submit() {
     const data = await res.json()
     if (!res.ok) {
       state.value = data?.error?.code === 'VALIDATION_ERROR' ? 'validation' : 'service'
-      errorMessage.value = data?.error?.message || 'Request failed'
+      errorMessage.value = getPersianErrorMessage(data?.error)
       return
     }
     result.value = data
     state.value = 'success'
   } catch {
     state.value = 'service'
-    errorMessage.value = 'Could not reach the conversion service'
+    errorMessage.value = 'ارتباط با سرویس تبدیل امکان‌پذیر نیست.'
   }
 }
 </script>
@@ -79,8 +97,8 @@ async function submit() {
         </form>
 
         <p v-if="state === 'loading'" class="mt-4 text-sm text-slate-500">Calling conversion service…</p>
-        <p v-else-if="state === 'validation'" class="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">{{ errorMessage }}</p>
-        <p v-else-if="state === 'service'" class="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">{{ errorMessage }}</p>
+        <p v-else-if="state === 'validation'" dir="rtl" class="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-right text-sm text-amber-800">{{ errorMessage }}</p>
+        <p v-else-if="state === 'service'" dir="rtl" class="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-right text-sm text-rose-800">{{ errorMessage }}</p>
 
         <div v-else-if="state === 'success' && result" class="mt-6 space-y-3 rounded-xl bg-emerald-50 p-4">
           <p class="text-xs font-medium uppercase tracking-wide text-emerald-800">SHEBA / IBAN</p>
